@@ -1,0 +1,6 @@
+flake8
+flake8-broken-line
+flake8-isort
+flake8-plugin-utils
+flake8-return
+pep8-naming
