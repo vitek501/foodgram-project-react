@@ -13,9 +13,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', default='key')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['yamdbfinal.ddns.net', '127.0.0.1', '51.250.72.172', 'web']
+ALLOWED_HOSTS = ['yamdbfinal.ddns.net', '127.0.0.1', '51.250.72.172', 'web', 'localhost']
 
 
 # Application definition

@@ -15,7 +15,8 @@ from .pagination import CommonPagination
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (FollowSerializer, IngredientSerializer,
                           RecipeCreateSerializer, RecipeReadSerializer,
-                          RecipeSerializer, TagSerializer)
+                          RecipeSerializer, TagSerializer,
+                          SubscriptionSerializer)
 
 
 class CustomUserViewSet(UserViewSet):
@@ -30,8 +31,8 @@ class CustomUserViewSet(UserViewSet):
     def subscriptions(self, request):
         queryset = User.objects.filter(following__user=request.user)
         page = self.paginate_queryset(queryset)
-        serializer = FollowSerializer(page, many=True,
-                                      context={'request': request})
+        serializer = SubscriptionSerializer(page, many=True,
+                                            context={'request': request})
         return self.get_paginated_response(serializer.data)
 
     @action(methods=['post', 'delete'], detail=True,
@@ -41,17 +42,18 @@ class CustomUserViewSet(UserViewSet):
         author = get_object_or_404(User, id=kwargs['id'])
         subscription = Follow.objects.filter(
             user=user, author=author)
-
         if request.method == 'POST':
-            if subscription.exists():
-                return Response({'error': 'Вы уже подписаны'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            if user == author:
-                return Response({'error': 'Невозможно подписаться на себя'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            serializer = FollowSerializer(author, context={'request': request})
-            Follow.objects.create(user=user, author=author)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            serializer = FollowSerializer(
+                data={'user': user.id, 'author': author.id},
+                context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            author_serializer = SubscriptionSerializer(
+                author,
+                context={'request': request},
+            )
+            return Response(author_serializer.data,
+                            status=status.HTTP_201_CREATED)
         if subscription.exists():
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
@@ -74,9 +76,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_queryset(self):
-        is_favorited = self.request.query_params.get('is_favorited')
-        if is_favorited is not None and int(is_favorited) == 1:
-            return Recipe.objects.filter(favorites__user=self.request.user)
         is_in_shopping_cart = self.request.query_params.get(
             'is_in_shopping_cart')
         if is_in_shopping_cart is not None and int(is_in_shopping_cart) == 1:

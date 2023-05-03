@@ -16,11 +16,6 @@ class NewUserSerializer(UserCreateSerializer):
         fields = ('email', 'id',
                   'username', 'first_name',
                   'last_name', 'password')
-        extra_kwargs = {
-            'first_name': {'required': True, 'allow_blank': False},
-            'last_name': {'required': True, 'allow_blank': False},
-            'email': {'required': True, 'allow_blank': False},
-        }
 
     def validate_username(self, value):
         value = value.lower()
@@ -80,7 +75,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class FollowSerializer(serializers.ModelSerializer):
+class SubscriptionSerializer(serializers.ModelSerializer):
     email = serializers.ReadOnlyField()
     username = serializers.ReadOnlyField()
     is_subscribed = serializers.SerializerMethodField()
@@ -94,11 +89,6 @@ class FollowSerializer(serializers.ModelSerializer):
                   'last_name', 'is_subscribed',
                   'recipes', 'recipes_count')
 
-    def validate(self, obj):
-        if (self.context['request'].user == obj):
-            raise serializers.ValidationError({'errors': 'Ошибка подписки.'})
-        return obj
-
     def get_is_subscribed(self, obj):
         return (
             self.context.get('request').user.is_authenticated
@@ -108,6 +98,22 @@ class FollowSerializer(serializers.ModelSerializer):
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = '__all__'
+
+    def validate(self, data):
+        author = self.instance
+        user = self.context.get('request').user
+        if (user == author):
+            raise serializers.ValidationError(
+                {'errors': 'Нельзя подписаться на самого себя!'})
+        if Follow.objects.filter(user=user, author=author).exists():
+            raise serializers.ValidationError({'errors': 'Вы уже подписаны'})
+        return data
 
 
 class IngredientRecipeGetSerializer(serializers.ModelSerializer):
@@ -258,9 +264,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             instance.tags.set(tags_data)
         if 'ingredients' in self.validated_data:
             ingredients_data = validated_data.pop('ingredients')
-            amount_set = IngredientRecipe.objects.filter(
-                recipe__id=instance.id)
-            amount_set.delete()
+            instance.recipes.all().delete()
             self.recipe_ingredient_create(ingredients_data, IngredientRecipe,
                                           instance)
         return super().update(instance, validated_data)
