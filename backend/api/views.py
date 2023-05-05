@@ -1,5 +1,6 @@
 from django.db.models import Sum
 from django.http import HttpResponse
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from recipes.models import (Favorite, Ingredient, IngredientRecipe, Recipe,
                             ShoppingCart, Tag)
@@ -72,16 +73,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     pagination_class = CommonPagination
     permission_classes = (IsAuthorOrReadOnly,)
-    filter_class = RecipeFilter
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
     http_method_names = ['get', 'post', 'patch', 'delete']
-
-    def get_queryset(self):
-        is_in_shopping_cart = self.request.query_params.get(
-            'is_in_shopping_cart')
-        if is_in_shopping_cart is not None and int(is_in_shopping_cart) == 1:
-            return Recipe.objects.filter(
-                shopping_recipe__user=self.request.user)
-        return Recipe.objects.all()
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -158,4 +152,4 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (AllowAny,)
     pagination_class = None
     filter_backends = [filters.SearchFilter]
-    search_fields = ('title', )
+    search_fields = ('^name', )

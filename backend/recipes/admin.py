@@ -34,7 +34,17 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     list_filter = ('author', 'name', 'tags')
     filter_horizontal = ('tags',)
+    readonly_fields = ('favorite',)
     empty_value_display = '-пусто-'
+    fields = ('image',
+              ('name', 'author'),
+              'text',
+              ('tags', 'cooking_time'),
+              'favorite')
+
+    def favorite(self, obj):
+        return obj.recipe_lists.count()
+    favorite.short_description = 'Раз в избранном'
 
 
 class IngredientInRecipeAdmin(admin.ModelAdmin):

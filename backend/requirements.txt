@@ -6,3 +6,4 @@ pillow==9.5.0
 psycopg2-binary==2.8.6
 pytest-django==4.4.0
 pytest-pythonpath==0.7.3
+django-cors-headers==3.14.0
